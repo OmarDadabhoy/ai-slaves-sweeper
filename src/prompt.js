@@ -30,7 +30,7 @@ Before doing any task work, activate goal mode for this job:
 - Treat ${overarchingGoalPath} as the parent drain goal.
 - In Codex, call create_goal with the task title as the concrete objective when goal tools are available.
 - In Claude Code, use Claude Code native goal mode with the task title as the active objective.
-- In other agents, use the already-written fallback goal file at ${currentGoalPath}.
+- In Hermes, OpenClaw, or other agents, use the already-written fallback goal file at ${currentGoalPath} unless that runtime exposes native goal mode.
 
 After the task is complete or blocked, clearly state done, blocked, or needs_human with verification so the wrapper can close the goal.
 

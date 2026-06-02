@@ -7,8 +7,16 @@ Goal mode:
 - Activate goal mode before doing any task work.
 - In Codex, call `create_goal` for this task when goal tools are available.
 - In Claude Code, use Claude Code native goal mode for this task.
-- In other agents, treat the wrapper-written `state/current_goal.md` as the active goal record.
+- In Hermes, OpenClaw, or other agents, treat the wrapper-written `state/current_goal.md` as the active goal record unless that runtime exposes native goal mode.
 - Do not start a second task until the current goal is done or blocked.
+
+Model selection:
+
+- Run this worker/sub-agent on the best available model unless the user explicitly requested another model, cheaper mode, faster mode, or runtime default.
+- Codex workers default to `gpt-5.5` when a model flag is available.
+- Claude Code workers default to the `opus` model alias when a model flag is available; set `CLAUDE_CODE_SUBAGENT_MODEL=opus` for Claude Code subagents unless the user explicitly requested another model.
+- Hermes workers default to `opus` when a model flag is available.
+- OpenClaw workers use the configured best OpenClaw model and default to `xhigh` thinking because the CLI exposes thinking level rather than a per-turn model flag.
 
 Runtime capabilities:
 

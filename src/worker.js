@@ -9,6 +9,7 @@ import { appendTaskSuggestions, markTaskStatus } from "./writeback.js";
 import { sendNotification } from "./notify.js";
 import { activateGoal, closeGoal } from "./goals.js";
 import { writeHandoffReport } from "./handoff-report.js";
+import { defaultModel, hermesArgs, openClawArgs } from "./runtimes.js";
 
 function parseArgs(argv) {
   const args = { _: [] };
@@ -164,11 +165,6 @@ async function main() {
   console.log(JSON.stringify(result, null, 2));
 }
 
-function defaultModel(agent) {
-  if (agent === "claude") return process.env.GSD_CLAUDE_MODEL;
-  return process.env.GSD_CODEX_MODEL ?? "gpt-5.5";
-}
-
 function runAgent({ prompt, promptPath, runDir, resultPath, workspace, agent, model, agentCommand }) {
   if (agentCommand) {
     const command = agentCommand
@@ -190,14 +186,34 @@ function runAgent({ prompt, promptPath, runDir, resultPath, workspace, agent, mo
     ];
     if (model) args.push("--model", model);
     args.push(prompt);
-    return spawnCommand("claude", args, "", runDir, resultPath);
+    const env = model ? { CLAUDE_CODE_SUBAGENT_MODEL: model } : {};
+    return spawnCommand("claude", args, "", runDir, resultPath, { env });
+  }
+
+  if (agent === "hermes") {
+    return spawnCommand("hermes", hermesArgs(prompt, model), "", runDir, resultPath);
+  }
+
+  if (agent === "openclaw") {
+    try {
+      return spawnCommand("openclaw", openClawArgs(prompt), "", runDir, resultPath);
+    } catch (error) {
+      const result = {
+        status: "blocked",
+        summary: error.message,
+        verification: "configure OpenClaw routing env vars or use --agent-command",
+        follow_up: "",
+      };
+      writeJson(resultPath, result);
+      return Promise.resolve(result);
+    }
   }
 
   if (agent !== "codex") {
     const result = {
       status: "blocked",
       summary: `unsupported agent "${agent}"`,
-      verification: "use --agent codex, --agent claude, or --agent-command",
+      verification: "use --agent codex, --agent claude, --agent hermes, --agent openclaw, or --agent-command",
       follow_up: "",
     };
     writeJson(resultPath, result);
@@ -230,7 +246,11 @@ function spawnCommand(command, args, input, cwd, resultPath, options = {}) {
   return new Promise((resolve) => {
     const stdoutPath = path.join(cwd, "agent.stdout.log");
     const stderrPath = path.join(cwd, "agent.stderr.log");
-    const child = spawn(command, args, { cwd, stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(command, args, {
+      cwd,
+      env: { ...process.env, ...(options.env ?? {}) },
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     let stdout = "";
     let stderr = "";
 
